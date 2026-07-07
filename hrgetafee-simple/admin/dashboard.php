@@ -33,30 +33,33 @@ if (!empty($role_filter)) {
 
 $users = $conn->query("SELECT u.*, e.first_name, e.last_name, e.employee_code, r.role_name FROM users u JOIN employees e ON u.employee_id = e.employee_id JOIN roles r ON u.role_id = r.role_id $where_clause ORDER BY u.created_at DESC")->fetch_all(MYSQLI_ASSOC);
 
-// Get system logs (last 15 actions)
+// Get system logs (last 20 actions)
 $logs = $conn->query("
     SELECT 
         'user_created' as action_type,
-        CONCAT('Created user: ', username) as action_detail,
-        u.created_at as timestamp,
-        'create' as action_icon
+        CONCAT('👤 Created user: ', username) as action_detail,
+        u.created_at as timestamp
     FROM users u
     UNION ALL
     SELECT 
         'holiday_added' as action_type,
-        CONCAT('Added holiday: ', holiday_name) as action_detail,
-        h.created_at as timestamp,
-        'add' as action_icon
+        CONCAT('📅 Added holiday: ', holiday_name) as action_detail,
+        h.created_at as timestamp
     FROM holidays h
     UNION ALL
     SELECT 
         'leave_type_added' as action_type,
-        CONCAT('Added leave type: ', leave_type_name) as action_detail,
-        lt.created_at as timestamp,
-        'add' as action_icon
+        CONCAT('📋 Added leave type: ', leave_type_name) as action_detail,
+        lt.created_at as timestamp
     FROM leave_types lt
+    UNION ALL
+    SELECT 
+        'employee_added' as action_type,
+        CONCAT('👥 Added employee: ', first_name, ' ', last_name) as action_detail,
+        created_at as timestamp
+    FROM employees
     ORDER BY timestamp DESC
-    LIMIT 15
+    LIMIT 20
 ")->fetch_all(MYSQLI_ASSOC);
 ?>
 <!DOCTYPE html>
@@ -117,19 +120,6 @@ $logs = $conn->query("
             font-size: 12px;
             white-space: nowrap;
             margin-left: 20px;
-        }
-        
-        .log-icon {
-            display: inline-block;
-            width: 24px;
-            height: 24px;
-            background: #667eea;
-            color: white;
-            border-radius: 50%;
-            text-align: center;
-            line-height: 24px;
-            margin-right: 10px;
-            font-size: 12px;
         }
         
         .stat-card {
@@ -207,6 +197,7 @@ $logs = $conn->query("
         <div class="card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; margin-bottom: 30px;">
             <h3>⚙️ System Management</h3>
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-top: 15px;">
+                <a href="manage_employees.php" class="btn btn-primary" style="text-align: center; background: rgba(255,255,255,0.2);">👥 Manage Employees</a>
                 <a href="manage_users.php" class="btn btn-primary" style="text-align: center; background: rgba(255,255,255,0.2);">👤 Manage Users</a>
                 <a href="manage_holidays.php" class="btn btn-primary" style="text-align: center; background: rgba(255,255,255,0.2);">📅 Holidays</a>
                 <a href="manage_leaves.php" class="btn btn-primary" style="text-align: center; background: rgba(255,255,255,0.2);">📋 Leave Types</a>
@@ -220,14 +211,13 @@ $logs = $conn->query("
                 <?php foreach ($logs as $log): ?>
                 <div class="log-item">
                     <div class="action">
-                        <span class="log-icon">📝</span>
                         <strong><?php echo htmlspecialchars($log['action_detail']); ?></strong>
                     </div>
                     <div class="time"><?php echo format_datetime($log['timestamp']); ?></div>
                 </div>
                 <?php endforeach; ?>
             <?php else: ?>
-                <p style="text-align: center; color: #999;">No activity yet</p>
+                <p style="text-align: center; color: #999; padding: 20px;">No activity yet</p>
             <?php endif; ?>
         </div>
 
@@ -239,7 +229,6 @@ $logs = $conn->query("
                     <input type="text" name="search" placeholder="Search by name, username, or employee ID..." value="<?php echo htmlspecialchars($search); ?>">
                     <select name="role">
                         <option value="">-- All Roles --</option>
-                        <option value="1" <?php echo ($role_filter == 1 ? 'selected' : ''); ?>>HR Administrator</option>
                         <option value="2" <?php echo ($role_filter == 2 ? 'selected' : ''); ?>>HR Staff</option>
                         <option value="3" <?php echo ($role_filter == 3 ? 'selected' : ''); ?>>Employee</option>
                     </select>
@@ -253,7 +242,7 @@ $logs = $conn->query("
 
         <!-- System Users Table -->
         <div class="table-container">
-            <h3>👥 System Users (<?php echo count($users); ?>)</h3>
+            <h3>👤 System Users (<?php echo count($users); ?>)</h3>
             <table>
                 <thead>
                     <tr>
@@ -284,7 +273,7 @@ $logs = $conn->query("
                             <td><?php echo $user['last_login'] ? format_datetime($user['last_login']) : '-'; ?></td>
                             <td>
                                 <a href="user_status.php?user_id=<?php echo $user['user_id']; ?>&status=<?php echo ($user['status'] === 'active' ? 'inactive' : 'active'); ?>" class="btn <?php echo ($user['status'] === 'active' ? 'btn-danger' : 'btn-success'); ?>" style="padding: 5px 10px; font-size: 12px;">
-                                    <?php echo ($user['status'] === 'active' ? 'Deactivate' : 'Activate'); ?>
+                                    <?php echo ($user['status'] === 'active' ? '🔒 Deactivate' : '🔓 Activate'); ?>
                                 </a>
                             </td>
                         </tr>
